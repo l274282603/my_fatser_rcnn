@@ -84,7 +84,7 @@ def getdata_for_rpn(config, img_data, width, heigth, resized_width, resized_heig
     # 另外，只是在一张图片中随机采样256个anchor,其他的也不参与训练
     y_is_box_valid = np.zeros((output_height, output_width, num_anchors))
 
-    # （36,36,9*4），用来存放RPN网络，最后回归层输出时的y值
+    # （36,36,9*4），用来存放RPN网络，针对一张图片，最后回归层的标签Y值
     y_rpn_regr = np.zeros((output_height, output_width, num_anchors * 4))
 
     #获取一张训练图片的真实标注框个数，也就是含有的待检测的目标个数
@@ -268,6 +268,8 @@ def getdata_for_rpn(config, img_data, width, heigth, resized_width, resized_heig
     #将y_is_box_valid 与 y_rpn_overlap连接到一块
     y_rpn_cls = np.concatenate([y_is_box_valid, y_rpn_overlap], axis=3)
 
+    #对于回归损失来说，只是针对正样本进行计算的，负样本和不参与训练的其他样本都需要过滤掉，不参与训练
+    #所以这块需要将y_rpn_overlap 和 y_rpn_regr拼接起来作为RPN网络回归层的真实Y值，方便后续计算损失函数
     y_rpn_regr = np.concatenate([np.repeat(y_rpn_overlap, 4, axis=3), y_rpn_regr], axis=3)
 
     return np.copy(y_rpn_cls), np.copy(y_rpn_regr)
