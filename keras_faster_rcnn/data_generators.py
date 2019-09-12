@@ -10,11 +10,11 @@ from keras_faster_rcnn import data_augment
 
 def get_new_img_size(width, height, img_min_size=600):
     if width <= height:
-        f = float(width / img_min_size)
+        f = float(img_min_size / width)
         resized_height = int(f * height)
         resized_width = int(img_min_size)
     else:
-        f = float(height / img_min_size)
+        f = float(img_min_size / height)
         resized_width = int(f * width)
         resized_height = int(img_min_size)
     return resized_width, resized_height
@@ -228,6 +228,7 @@ def getdata_for_rpn(config, img_data, width, heigth, resized_width, resized_heig
     y_is_box_valid = np.expand_dims(y_is_box_valid, axis=0)
     y_rpn_regr = np.expand_dims(y_rpn_regr, axis=0)
 
+
     '''
     a = np.array([[0,1,0],
                  [1,0,1]])
@@ -272,13 +273,15 @@ def getdata_for_rpn(config, img_data, width, heigth, resized_width, resized_heig
     #所以这块需要将y_rpn_overlap 和 y_rpn_regr拼接起来作为RPN网络回归层的真实Y值，方便后续计算损失函数
     y_rpn_regr = np.concatenate([np.repeat(y_rpn_overlap, 4, axis=3), y_rpn_regr], axis=3)
 
+
     return np.copy(y_rpn_cls), np.copy(y_rpn_regr)
+
 
 
 
 def get_anchor_data_gt(img_datas, class_count, C, mode="train"):
     '''
-    生成最终训练数据集的迭代器
+    生成用于RPN网络训练数据集的迭代器
     :param img_data:  原始数据，list,每个元素都是一个字典类型，存放着每张图片的相关信息
     all_img_data[0] = {'width': 500,
                        'height': 500,
@@ -300,7 +303,6 @@ def get_anchor_data_gt(img_datas, class_count, C, mode="train"):
 
         for img_data in img_datas:
             try:
-                pass
                 #数据增强
                 if mode == "train":
                     img_data_aug, x_img = data_augment.augment(img_data, C, augment=True)
@@ -327,7 +329,7 @@ def get_anchor_data_gt(img_datas, class_count, C, mode="train"):
 
                 y_rpn_cls, y_rpn_regr = getdata_for_rpn(C, img_data_aug, width, height, resized_width, resized_height)
 
-                y_rpn_regr[:, y_rpn_regr.shape[1] // 2:, :, :] *= C.std_scaling
+                y_rpn_regr[:,:, :, y_rpn_regr.shape[1] // 2:] *= C.std_scaling
 
                 yield  np.copy(x_img), [np.copy(y_rpn_cls), np.copy(y_rpn_regr)], img_data_aug
             except Exception as e:
