@@ -5,6 +5,36 @@ import math
 import copy
 from keras_faster_rcnn import data_generators
 
+def apply_regr(x, y, w, h, tx, ty, tw, th):
+    '''
+        通过rpn网络的回归层的预测值，来调整anchor位置
+        :param X:
+        :param T:
+        :return:
+    '''
+    try:
+        # (cx, cy)原始anchor中心点位置
+        cx = x + w/2.
+        cy = y + h/2.
+
+        #(cx1, cy1)经过rpn网络回归层调整后，anchor中心点位置
+        cx1 = tx * w + cx
+        cy1 = ty * h + cy
+
+        w1 = np.exp(tw.astype(np.float64)) * w  #经过rpn网络回归层调整后，anchor 宽度
+        h1 = np.exp(th.astype(np.float64)) * h  #经过rpn网络回归层调整后，anchor 高度
+        #（x1，y1）经过rpn网络回归层调整后，anchor的左上点坐标
+        x1 = cx1 - w1/2.
+        y1 = cy1 - h1/2.
+
+        x1 = np.round(x1)
+        y1 = np.round(y1)
+        w1 = np.round(w1)
+        h1 = np.round(h1)
+        return x1, y1, w1, h1
+    except Exception as e:
+        print(e)
+        return x, y, w, h
 
 
 def apply_regr_np(X, T):

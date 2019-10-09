@@ -41,12 +41,14 @@ class RoiPoolingConv(Layer):
         :return:
         '''
         # x 即为传入的模型的输入
+        # print("call---len(x)=",len(x))
         assert(len(x) == 2)
 
         feature_map = x[0]  #feature map
         rois = x[1]  #输入的所有roi shape=(batchsize, None, 4),最后一维4，代表着对应roi在feature map中的四个坐标值（左上点坐标和宽高）
 
         input_shape = K.shape(feature_map)
+
         roi_out_put = []
         for roi_index in range(self.num_rois):
             # print("roi_index=={}".format(roi_index))
@@ -59,11 +61,47 @@ class RoiPoolingConv(Layer):
             y = K.cast(y, 'int32')
             w = K.cast(w, 'int32')
             h = K.cast(h, 'int32')
-            one_roi_out = tf.image.resize_images(feature_map[:, y:y+h, x:x+w, :], (self.pool_size, self.pool_size))
-            roi_out_put.append(one_roi_out)
 
+            # 将输入的不同ROI（候选框所对应的featuremap）划分为H * W（pool_size*pool_size）个块
+            # row_length即为每个块的宽度，col_length为每个块的高度
+            row_length = K.cast(w / self.pool_size, 'int32')
+            col_length = K.cast(h / self.pool_size, 'int32')
+
+            # one_roi_out = []
+            one_roi_out = tf.image.resize_images(feature_map[:, y:y+h, x:x+w, :], (self.pool_size, self.pool_size))
+            # return roi_block_pool
+
+            # for jy in range(self.pool_size):
+            #     for jx in range(self.pool_size):
+            #         print("jy=={}, jx={}".format(jy, jx))
+            #         x1 = x + jx * row_length
+            #         # 这块主要，对于不能完全均等分的，需要判断下靠近右边和下边的块，不能越界或者没包含完整
+            #         if (jx + 1) == self.pool_size:
+            #             x2 = x + w
+            #         else:
+            #             x2 = x1 + row_length
+            #
+            #         y1 = y + jy * col_length
+            #         # 这块主要，对于不能完全均等分的，需要判断下靠近右边和下边的块，不能越界或者没包含完整
+            #         if (jy + 1) == self.pool_size:
+            #             y2 = y + h
+            #         else:
+            #             y2 = y1 + col_length
+            #
+            #         x1 = K.cast(x1, 'int32')
+            #         x2 = K.cast(x2, 'int32')
+            #         y1 = K.cast(y1, 'int32')
+            #         y2 = K.cast(y2, 'int32')
+            #
+            #         roi_block = feature_map[:, y1:y2, x1:x2, :]
+            #         roi_block_pool = K.max(roi_block, axis=(1, 2))
+            #         one_roi_out.append(roi_block_pool)
+            # one_roi_out = tf.reshape(one_roi_out, (self.pool_size, self.pool_size, self.nb_channles))
+            roi_out_put.append(one_roi_out)
         roi_out_put = tf.reshape(roi_out_put, (self.num_rois, self.pool_size, self.pool_size, self.nb_channles))
+        # roi_out_put = K.concatenate(roi_out_put, axis=0)
         roi_out_put = tf.expand_dims(roi_out_put, axis=0)
+        # print("test")
         return roi_out_put
 
     # def call(self, x, mask=None):
